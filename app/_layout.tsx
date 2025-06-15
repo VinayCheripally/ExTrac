@@ -7,11 +7,9 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { database } from '@/lib/database';
-import { registerForPushNotificationsAsync } from '@/lib/notifications'
-import { useFrameworkReady } from '@/hooks/useFrameworkReady';
+import { registerForPushNotificationsAsync } from '@/lib/notifications';
 
 export default function RootLayout() {
-  useFrameworkReady();
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
