@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Expense Tracker",
-    "slug": "expense-tracker",
+    "name": "testreader",
+    "slug": "testreader",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "expense-tracker",
+    "scheme": "testreader",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -17,8 +17,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.vinayhjejiner.testreader",
-      "googleServicesFile": "./google-services.json"
+      "package": "com.vinayhjejiner.testreader"
     },
     "web": {
       "bundler": "metro",
@@ -34,13 +33,6 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
-        }
-      ],
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/images/notification-icon.png",
-          "color": "#ffffff"
         }
       ]
     ],
