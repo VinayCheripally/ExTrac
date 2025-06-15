@@ -10,7 +10,7 @@ import {
   Modal,
 } from 'react-native';
 import { router } from 'expo-router';
-import { X, Check, Plus, Tag } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { database, Expense, Category } from '@/lib/database';
 
@@ -145,7 +145,7 @@ export default function CategorizeScreen() {
   if (uncategorizedExpenses.length === 0) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <Check size={64} color="#34C759" />
+        <Ionicons name="checkmark-circle" size={64} color="#34C759" />
         <Text style={styles.emptyTitle}>All Caught Up!</Text>
         <Text style={styles.emptySubtitle}>
           No uncategorized expenses found
@@ -162,7 +162,7 @@ export default function CategorizeScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <X size={24} color="#000000" />
+          <Ionicons name="close" size={24} color="#000000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Categorize Expense</Text>
         <Text style={styles.progressText}>
@@ -207,7 +207,7 @@ export default function CategorizeScreen() {
               style={styles.addCategoryButton}
               onPress={() => setShowAddCategory(true)}
             >
-              <Plus size={16} color="#007AFF" />
+              <Ionicons name="add" size={16} color="#007AFF" />
               <Text style={styles.addCategoryText}>Add</Text>
             </TouchableOpacity>
           </View>
@@ -266,7 +266,7 @@ export default function CategorizeScreen() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add New Category</Text>
               <TouchableOpacity onPress={() => setShowAddCategory(false)}>
-                <X size={24} color="#8E8E93" />
+                <Ionicons name="close" size={24} color="#8E8E93" />
               </TouchableOpacity>
             </View>
             
