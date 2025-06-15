@@ -8,7 +8,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import { PieChart, TrendingUp, Calendar } from 'lucide-react-native';
 
 import { database } from '@/lib/database';
 
@@ -120,7 +120,7 @@ export default function AnalyticsScreen() {
       {/* Category Breakdown */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Ionicons name="pie-chart" size={24} color="#007AFF" />
+          <PieChart size={24} color="#007AFF" />
           <Text style={styles.sectionTitle}>Spending by Category</Text>
         </View>
 
@@ -161,7 +161,7 @@ export default function AnalyticsScreen() {
       {/* Monthly Trend */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Ionicons name="trending-up" size={24} color="#34C759" />
+          <TrendingUp size={24} color="#34C759" />
           <Text style={styles.sectionTitle}>Monthly Trend</Text>
         </View>
 
@@ -206,7 +206,7 @@ export default function AnalyticsScreen() {
       {/* Quick Stats */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Ionicons name="calendar" size={24} color="#FF9500" />
+          <Calendar size={24} color="#FF9500" />
           <Text style={styles.sectionTitle}>Quick Stats</Text>
         </View>
 

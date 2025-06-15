@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Bell, Plus, TrendingUp, TrendingDown, DollarSign } from 'lucide-react-native';
 
 import { database, Expense } from '@/lib/database';
 
@@ -102,7 +102,7 @@ export default function HomeScreen() {
         </View>
         {uncategorizedCount > 0 && (
           <TouchableOpacity style={styles.notificationBadge} onPress={handleCategorizePress}>
-            <Ionicons name="notifications" size={20} color="#FFFFFF" />
+            <Bell size={20} color="#FFFFFF" />
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{uncategorizedCount}</Text>
             </View>
@@ -114,7 +114,7 @@ export default function HomeScreen() {
       <View style={styles.statsContainer}>
         <View style={[styles.statCard, styles.primaryCard]}>
           <View style={styles.statHeader}>
-            <Ionicons name="cash" size={24} color="#FFFFFF" />
+            <DollarSign size={24} color="#FFFFFF" />
             <Text style={styles.statLabel}>This Month</Text>
           </View>
           <Text style={styles.statValue}>{formatCurrency(totalThisMonth)}</Text>
@@ -122,13 +122,13 @@ export default function HomeScreen() {
 
         <View style={styles.statRow}>
           <View style={[styles.statCard, styles.secondaryCard]}>
-            <Ionicons name="trending-up" size={20} color="#34C759" />
+            <TrendingUp size={20} color="#34C759" />
             <Text style={styles.statLabelSmall}>Total Expenses</Text>
             <Text style={styles.statValueSmall}>{expenses.length}</Text>
           </View>
           
           <View style={[styles.statCard, styles.secondaryCard]}>
-            <Ionicons name="trending-down" size={20} color="#FF3B30" />
+            <TrendingDown size={20} color="#FF3B30" />
             <Text style={styles.statLabelSmall}>Uncategorized</Text>
             <Text style={styles.statValueSmall}>{uncategorizedCount}</Text>
           </View>
@@ -139,7 +139,7 @@ export default function HomeScreen() {
       {uncategorizedCount > 0 && (
         <TouchableOpacity style={styles.alertCard} onPress={handleCategorizePress}>
           <View style={styles.alertContent}>
-            <Ionicons name="notifications" size={24} color="#FF9500" />
+            <Bell size={24} color="#FF9500" />
             <View style={styles.alertText}>
               <Text style={styles.alertTitle}>
                 {uncategorizedCount} expense{uncategorizedCount > 1 ? 's' : ''} need{uncategorizedCount === 1 ? 's' : ''} categorization
@@ -161,7 +161,7 @@ export default function HomeScreen() {
 
         {expenses.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="add-circle-outline" size={48} color="#C7C7CC" />
+            <Plus size={48} color="#C7C7CC" />
             <Text style={styles.emptyStateText}>No expenses yet</Text>
             <Text style={styles.emptyStateSubtext}>
               Your SMS-based expenses will appear here automatically

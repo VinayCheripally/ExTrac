@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { PermissionsAndroid, Platform, NativeModules, NativeEventEmitter } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Home, PieChart, List, Settings } from 'lucide-react-native';
 
 import { extractDebitAmounts, extractMerchantName } from '@/lib/smsParser';
 import { database } from '@/lib/database';
@@ -113,7 +113,7 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ size, color }) => (
-            <Ionicons name="home" size={size} color={color} />
+            <Home size={size} color={color} />
           ),
         }}
       />
@@ -122,7 +122,7 @@ export default function TabLayout() {
         options={{
           title: 'Expenses',
           tabBarIcon: ({ size, color }) => (
-            <Ionicons name="list" size={size} color={color} />
+            <List size={size} color={color} />
           ),
         }}
       />
@@ -131,7 +131,7 @@ export default function TabLayout() {
         options={{
           title: 'Analytics',
           tabBarIcon: ({ size, color }) => (
-            <Ionicons name="pie-chart" size={size} color={color} />
+            <PieChart size={size} color={color} />
           ),
         }}
       />
@@ -140,7 +140,7 @@ export default function TabLayout() {
         options={{
           title: 'Settings',
           tabBarIcon: ({ size, color }) => (
-            <Ionicons name="settings" size={size} color={color} />
+            <Settings size={size} color={color} />
           ),
         }}
       />

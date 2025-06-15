@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import { Trash2, Filter, Calendar } from 'lucide-react-native';
 
 import { database, Expense } from '@/lib/database';
 
@@ -111,7 +111,7 @@ export default function ExpensesScreen() {
         
         <View style={styles.expenseFooter}>
           <View style={styles.dateContainer}>
-            <Ionicons name="calendar" size={14} color="#8E8E93" />
+            <Calendar size={14} color="#8E8E93" />
             <Text style={styles.expenseDate}>{formatDate(item.date)}</Text>
           </View>
           
@@ -119,7 +119,7 @@ export default function ExpensesScreen() {
             style={styles.deleteButton}
             onPress={() => handleDeleteExpense(item)}
           >
-            <Ionicons name="trash" size={16} color="#FF3B30" />
+            <Trash2 size={16} color="#FF3B30" />
           </TouchableOpacity>
         </View>
       </View>
@@ -170,7 +170,7 @@ export default function ExpensesScreen() {
 
       {/* Filters */}
       <View style={styles.filtersContainer}>
-        <Ionicons name="filter" size={20} color="#8E8E93" />
+        <Filter size={20} color="#8E8E93" />
         <View style={styles.filterButtons}>
           {renderFilterButton('all', 'All')}
           {renderFilterButton('categorized', 'Categorized')}

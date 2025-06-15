@@ -8,7 +8,15 @@ import {
   Alert,
   Switch,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  Bell,
+  Database,
+  Trash2,
+  Download,
+  Shield,
+  Info,
+  ChevronRight,
+} from 'lucide-react-native';
 
 import { database } from '@/lib/database';
 import { cancelAllNotifications } from '@/lib/notifications';
@@ -75,7 +83,7 @@ export default function SettingsScreen() {
   };
 
   const renderSettingItem = (
-    icon: string,
+    icon: React.ReactNode,
     title: string,
     subtitle?: string,
     onPress?: () => void,
@@ -89,11 +97,7 @@ export default function SettingsScreen() {
     >
       <View style={styles.settingLeft}>
         <View style={[styles.iconContainer, danger && styles.dangerIcon]}>
-          <Ionicons 
-            name={icon as any} 
-            size={20} 
-            color={danger ? "#FF3B30" : "#007AFF"} 
-          />
+          {icon}
         </View>
         <View style={styles.settingText}>
           <Text style={[styles.settingTitle, danger && styles.dangerText]}>
@@ -104,7 +108,7 @@ export default function SettingsScreen() {
           )}
         </View>
       </View>
-      {rightComponent || (onPress && <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />)}
+      {rightComponent || (onPress && <ChevronRight size={20} color="#C7C7CC" />)}
     </TouchableOpacity>
   );
 
@@ -120,7 +124,7 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Notifications</Text>
         {renderSettingItem(
-          'notifications',
+          <Bell size={20} color="#007AFF" />,
           'Push Notifications',
           'Get notified when new expenses are detected',
           undefined,
@@ -137,7 +141,7 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Automation</Text>
         {renderSettingItem(
-          'shield-checkmark',
+          <Shield size={20} color="#34C759" />,
           'Auto Categorization',
           'Automatically categorize expenses based on merchant patterns',
           undefined,
@@ -154,13 +158,13 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Data Management</Text>
         {renderSettingItem(
-          'download',
+          <Download size={20} color="#007AFF" />,
           'Export Data',
           'Download your expenses as JSON file',
           handleExportData
         )}
         {renderSettingItem(
-          'server',
+          <Database size={20} color="#8E8E93" />,
           'Database Info',
           'View local database statistics',
           () => Alert.alert('Database Info', 'All data is stored locally on your device using SQLite')
@@ -171,7 +175,7 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Danger Zone</Text>
         {renderSettingItem(
-          'trash',
+          <Trash2 size={20} color="#FF3B30" />,
           'Clear All Data',
           'Permanently delete all expenses and categories',
           handleClearAllData,
@@ -184,7 +188,7 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>About</Text>
         {renderSettingItem(
-          'information-circle',
+          <Info size={20} color="#8E8E93" />,
           'App Version',
           '1.0.0',
           () => Alert.alert('About', 'SMS-based Expense Tracker\nVersion 1.0.0\n\nAutomatically tracks expenses from SMS messages.')
@@ -193,7 +197,7 @@ export default function SettingsScreen() {
 
       {/* Privacy Notice */}
       <View style={styles.privacyNotice}>
-        <Ionicons name="shield-checkmark" size={16} color="#34C759" />
+        <Shield size={16} color="#34C759" />
         <Text style={styles.privacyText}>
           All your data is stored locally on your device. No information is sent to external servers.
         </Text>
