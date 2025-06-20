@@ -1,5 +1,6 @@
 export function extractDebitAmounts(messages: string[]): { amount: number; originalMessage: string }[] {
-  const amountRegex = /(?:₹|INR|Rs\.?|Rupees?)\s*[-/]?\s*(\d{1,3}(?:,\d{3})*|\d+)(?:\.(\d{1,2}))?/gi;
+  // Updated regex to handle more formats including "Rs.10.00" without space
+  const amountRegex = /(?:₹|INR|Rs\.?)\s*[-/]?\s*(\d{1,3}(?:,\d{3})*|\d+)(?:\.(\d{1,2}))?/gi;
 
   const debitPhrases = [
     "has been debited", "debited from", "debited with", "debited by",
@@ -12,10 +13,12 @@ export function extractDebitAmounts(messages: string[]): { amount: number; origi
     "wallet debited", "payment deducted", "payment of", "₹ debited", "₹ deducted", "₹ charged",
     "transferred to", "has been transferred to", "was transferred to", "amount transferred",
     "you transferred", "payment transferred", "funds transferred", "transferred successfully",
-    "transfer of", "money transferred", "sent to", "credited to other account from yours"
+    "transfer of", "money transferred", "sent to", "credited to other account from yours",
+    // Added new patterns for UPI and bank transfers
+    "credited to", "via upi", "upi ref", "a/c", "account"
   ];
 
-  const ignorePhrases = ["reversed", "refunded", "credited"];
+  const ignorePhrases = ["reversed", "refunded", "credited back", "refund"];
 
   function cleanAmountPart(text: string | null): string {
     return (text || '00').replace(/\D/g, '');
@@ -39,12 +42,12 @@ export function extractDebitAmounts(messages: string[]): { amount: number; origi
     amountRegex.lastIndex = 0; // Reset regex
     
     while ((match = amountRegex.exec(msg)) !== null) {
-      const [, intPart, decPart] = match;
+      const [fullMatch, intPart, decPart] = match;
       if (!intPart) continue;
 
-      // Get context around the amount
-      const contextStart = Math.max(0, match.index - 40);
-      const contextEnd = Math.min(msg.length, match.index + match[0].length + 40);
+      // Get context around the amount (larger window for better detection)
+      const contextStart = Math.max(0, match.index - 60);
+      const contextEnd = Math.min(msg.length, match.index + match[0].length + 60);
       const contextWindow = msgLc.slice(contextStart, contextEnd);
 
       // Skip if contains ignore phrases
@@ -52,8 +55,12 @@ export function extractDebitAmounts(messages: string[]): { amount: number; origi
         continue;
       }
 
-      // Check if contains debit phrases
-      if (debitPhrasesLc.some(phrase => contextWindow.includes(phrase))) {
+      // Check if contains debit phrases OR if it's a UPI/transfer message with amount at start
+      const hasDebitPhrase = debitPhrasesLc.some(phrase => contextWindow.includes(phrase));
+      const isUpiTransfer = msgLc.includes("upi") || msgLc.includes("credited to") || msgLc.includes("a/c");
+      const amountAtStart = match.index < 20; // Amount appears early in message
+      
+      if (hasDebitPhrase || (isUpiTransfer && amountAtStart)) {
         const integer = cleanAmountPart(intPart);
         const decimal = cleanAmountPart(decPart);
 
@@ -76,10 +83,13 @@ export function extractDebitAmounts(messages: string[]): { amount: number; origi
 }
 
 export function extractMerchantName(message: string): string {
-  // Common patterns for merchant extraction
+  // Enhanced patterns for merchant extraction including UPI transfers
   const patterns = [
+    // UPI transfer patterns
+    /credited to\s+([A-Z][A-Za-z\s&.]+?)(?:\s+via|\s+upi|\s+ref|\s+on|\s+\d|\s*$)/i,
+    /to\s+([A-Z][A-Za-z\s&.]+?)(?:\s+via|\s+upi|\s+ref|\s+on|\s+\d|\s*$)/i,
+    // Traditional merchant patterns
     /at\s+([A-Z][A-Z\s&]+?)(?:\s+on|\s+\d|\s*$)/i,
-    /to\s+([A-Z][A-Z\s&]+?)(?:\s+on|\s+\d|\s*$)/i,
     /from\s+([A-Z][A-Z\s&]+?)(?:\s+on|\s+\d|\s*$)/i,
     /via\s+([A-Z][A-Z\s&]+?)(?:\s+on|\s+\d|\s*$)/i,
   ];
