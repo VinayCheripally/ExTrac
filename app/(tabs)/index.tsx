@@ -1,5 +1,6 @@
 import { extractDebitAmounts, extractMerchantName } from "@/lib/smsParser";
-import { useEffect, useState } from "react";
+import { databaseManager, ExtractedExpense } from "@/lib/database";
+import { useEffect, useState, useCallback } from "react";
 import {
   NativeModules,
   ScrollView,
@@ -7,17 +8,11 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Alert,
+  RefreshControl,
 } from "react-native";
 
 const { SMSModule } = NativeModules;
-
-interface ExtractedExpense {
-  amount: number;
-  merchant: string;
-  originalMessage: string;
-  timestamp: string;
-  date: Date;
-}
 
 interface MonthlyExpense {
   month: string;
@@ -29,15 +24,45 @@ interface MonthlyExpense {
 
 export default function HomeScreen() {
   const [smsContent, setSmsContent] = useState("No message yet");
-  const [extractedExpenses, setExtractedExpenses] = useState<
-    ExtractedExpense[]
-  >([]);
+  const [extractedExpenses, setExtractedExpenses] = useState<ExtractedExpense[]>([]);
   const [lastProcessedMessage, setLastProcessedMessage] = useState("");
   const [monthlyExpenses, setMonthlyExpenses] = useState<MonthlyExpense[]>([]);
-  const [selectedView, setSelectedView] = useState<"recent" | "monthly">(
-    "recent"
-  );
+  const [selectedView, setSelectedView] = useState<"recent" | "monthly">("recent");
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [dbError, setDbError] = useState<string | null>(null);
 
+  // Initialize database
+  useEffect(() => {
+    const initDB = async () => {
+      try {
+        setIsLoading(true);
+        await databaseManager.initializeDatabase();
+        await loadExpensesFromDB();
+        setDbError(null);
+      } catch (error) {
+        console.error('Failed to initialize database:', error);
+        setDbError('Failed to initialize database. Some features may not work.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initDB();
+  }, []);
+
+  // Load expenses from database
+  const loadExpensesFromDB = useCallback(async () => {
+    try {
+      const expenses = await databaseManager.getAllExpenses();
+      setExtractedExpenses(expenses);
+    } catch (error) {
+      console.error('Failed to load expenses:', error);
+      setDbError('Failed to load expenses from database.');
+    }
+  }, []);
+
+  // SMS polling effect
   useEffect(() => {
     const getSMS = async () => {
       try {
@@ -49,22 +74,29 @@ export default function HomeScreen() {
           const debitAmounts = extractDebitAmounts([latestSMS]);
 
           if (debitAmounts.length > 0) {
-            const newExpenses = debitAmounts.map(
-              ({ amount, originalMessage }) => {
-                const now = new Date();
-                return {
-                  amount,
-                  merchant: extractMerchantName(originalMessage),
-                  originalMessage,
-                  timestamp: now.toLocaleString(),
-                  date: now,
-                };
-              }
-            );
+            const now = new Date();
+            
+            for (const { amount, originalMessage } of debitAmounts) {
+              const newExpense: Omit<ExtractedExpense, 'id'> = {
+                amount,
+                merchant: extractMerchantName(originalMessage),
+                originalMessage,
+                timestamp: now.toLocaleString(),
+                date: now.toISOString(),
+              };
 
-            setExtractedExpenses((prev) =>
-              [...newExpenses, ...prev].slice(0, 50)
-            ); // Keep last 50
+              try {
+                // Save to database
+                await databaseManager.insertExpense(newExpense);
+                console.log('Expense saved to database');
+              } catch (error) {
+                console.error('Failed to save expense to database:', error);
+                setDbError('Failed to save expense to database.');
+              }
+            }
+
+            // Reload expenses from database
+            await loadExpensesFromDB();
             setLastProcessedMessage(latestSMS);
           }
         }
@@ -76,7 +108,7 @@ export default function HomeScreen() {
     // Poll every 2 seconds
     const interval = setInterval(getSMS, 2000);
     return () => clearInterval(interval);
-  }, [lastProcessedMessage]);
+  }, [lastProcessedMessage, loadExpensesFromDB]);
 
   // Calculate monthly expenses whenever extractedExpenses changes
   useEffect(() => {
@@ -84,7 +116,7 @@ export default function HomeScreen() {
       const monthlyMap = new Map<string, MonthlyExpense>();
 
       extractedExpenses.forEach((expense) => {
-        const date = expense.date;
+        const date = new Date(expense.date);
         const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
         const monthName = date.toLocaleDateString("en-US", { month: "long" });
         const year = date.getFullYear();
@@ -127,10 +159,46 @@ export default function HomeScreen() {
     })}`;
   };
 
-  const clearExpenses = () => {
-    setExtractedExpenses([]);
-    setMonthlyExpenses([]);
+  const clearExpenses = async () => {
+    Alert.alert(
+      "Clear All Expenses",
+      "Are you sure you want to delete all expense records? This action cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Clear All",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await databaseManager.clearAllExpenses();
+              setExtractedExpenses([]);
+              setMonthlyExpenses([]);
+              Alert.alert("Success", "All expenses have been cleared.");
+            } catch (error) {
+              console.error('Failed to clear expenses:', error);
+              Alert.alert("Error", "Failed to clear expenses from database.");
+            }
+          },
+        },
+      ]
+    );
   };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadExpensesFromDB();
+      setDbError(null);
+    } catch (error) {
+      console.error('Failed to refresh expenses:', error);
+      setDbError('Failed to refresh expenses.');
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadExpensesFromDB]);
 
   const getCurrentMonthTotal = () => {
     const currentDate = new Date();
@@ -139,7 +207,7 @@ export default function HomeScreen() {
 
     return extractedExpenses
       .filter((expense) => {
-        const expenseDate = expense.date;
+        const expenseDate = new Date(expense.date);
         return (
           expenseDate.getMonth() === currentMonth &&
           expenseDate.getFullYear() === currentYear
@@ -172,7 +240,7 @@ export default function HomeScreen() {
       ) : (
         <View style={styles.expensesList}>
           {extractedExpenses.slice(0, 10).map((expense, index) => (
-            <View key={index} style={styles.expenseItem}>
+            <View key={expense.id || index} style={styles.expenseItem}>
               <View style={styles.expenseHeader}>
                 <Text style={styles.expenseAmount}>
                   {formatCurrency(expense.amount)}
@@ -223,7 +291,7 @@ export default function HomeScreen() {
                   .sort((a, b) => b.amount - a.amount)
                   .slice(0, 3)
                   .map((expense, expIndex) => (
-                    <View key={expIndex} style={styles.monthlyExpenseItem}>
+                    <View key={expense.id || expIndex} style={styles.monthlyExpenseItem}>
                       <Text style={styles.monthlyExpenseMerchant}>
                         {expense.merchant}
                       </Text>
@@ -245,12 +313,32 @@ export default function HomeScreen() {
     </View>
   );
 
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading expenses...</Text>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
       <View style={styles.header}>
         <Text style={styles.title}>ExTrac</Text>
         <Text style={styles.subtitle}>Expense Tracker</Text>
       </View>
+
+      {/* Database Error Banner */}
+      {dbError && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorText}>{dbError}</Text>
+        </View>
+      )}
 
       {/* Current Month Summary */}
       <View style={styles.summarySection}>
@@ -262,9 +350,10 @@ export default function HomeScreen() {
           {
             extractedExpenses.filter((e) => {
               const now = new Date();
+              const expenseDate = new Date(e.date);
               return (
-                e.date.getMonth() === now.getMonth() &&
-                e.date.getFullYear() === now.getFullYear()
+                expenseDate.getMonth() === now.getMonth() &&
+                expenseDate.getFullYear() === now.getFullYear()
               );
             }).length
           }{" "}
@@ -327,6 +416,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f5f5f5",
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#666",
+  },
   header: {
     backgroundColor: "#fff",
     padding: 20,
@@ -343,6 +442,19 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: "#666",
+  },
+  errorBanner: {
+    backgroundColor: "#ffebee",
+    padding: 12,
+    margin: 16,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: "#f44336",
+  },
+  errorText: {
+    color: "#c62828",
+    fontSize: 14,
+    fontWeight: "500",
   },
   summarySection: {
     backgroundColor: "#007AFF",
@@ -547,19 +659,5 @@ const styles = StyleSheet.create({
     color: "#999",
     fontStyle: "italic",
     marginTop: 4,
-  },
-  testText: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 8,
-  },
-  exampleText: {
-    fontSize: 12,
-    color: "#007AFF",
-    backgroundColor: "#f0f8ff",
-    padding: 8,
-    borderRadius: 4,
-    marginBottom: 4,
-    fontFamily: "monospace",
   },
 });
