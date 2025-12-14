@@ -3,7 +3,12 @@ import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build
 import android.os.Bundle
-
+import android.content.Intent
+import android.net.Uri
+import android.os.PowerManager
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import android.content.pm.PackageManager
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -21,6 +26,35 @@ class MainActivity : ReactActivity() {
     SplashScreenManager.registerOnActivity(this)
     // @generated end expo-splashscreen
     super.onCreate(null)
+
+    // Request SMS runtime permissions and ask to ignore battery optimizations
+    checkAndRequestPermissions()
+  }
+
+  private fun checkAndRequestPermissions() {
+    val needed = mutableListOf<String>()
+    if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED) {
+      needed.add(android.Manifest.permission.RECEIVE_SMS)
+    }
+    if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {
+      needed.add(android.Manifest.permission.READ_SMS)
+    }
+
+    if (needed.isNotEmpty()) {
+      ActivityCompat.requestPermissions(this, needed.toTypedArray(), 1234)
+    }
+
+    // Ask user to ignore battery optimizations for more reliable background work
+    try {
+      val pm = getSystemService(PowerManager::class.java)
+      if (pm != null && !pm.isIgnoringBatteryOptimizations(packageName)) {
+        val intent = Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+        intent.data = Uri.parse("package:$packageName")
+        startActivity(intent)
+      }
+    } catch (e: Exception) {
+      // ignore
+    }
   }
 
   /**

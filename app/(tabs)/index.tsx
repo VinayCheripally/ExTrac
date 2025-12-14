@@ -1,15 +1,15 @@
-import { extractDebitAmounts, extractMerchantName } from "@/lib/smsParser";
 import { databaseManager, ExtractedExpense } from "@/lib/database";
-import { useEffect, useState, useCallback } from "react";
+import { extractDebitAmounts, extractMerchantName } from "@/lib/smsParser";
+import { useCallback, useEffect, useState } from "react";
 import {
+  Alert,
   NativeModules,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Alert,
-  RefreshControl,
 } from "react-native";
 
 const { SMSModule } = NativeModules;
@@ -24,10 +24,14 @@ interface MonthlyExpense {
 
 export default function HomeScreen() {
   const [smsContent, setSmsContent] = useState("No message yet");
-  const [extractedExpenses, setExtractedExpenses] = useState<ExtractedExpense[]>([]);
+  const [extractedExpenses, setExtractedExpenses] = useState<
+    ExtractedExpense[]
+  >([]);
   const [lastProcessedMessage, setLastProcessedMessage] = useState("");
   const [monthlyExpenses, setMonthlyExpenses] = useState<MonthlyExpense[]>([]);
-  const [selectedView, setSelectedView] = useState<"recent" | "monthly">("recent");
+  const [selectedView, setSelectedView] = useState<"recent" | "monthly">(
+    "recent"
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
@@ -39,10 +43,50 @@ export default function HomeScreen() {
         setIsLoading(true);
         await databaseManager.initializeDatabase();
         await loadExpensesFromDB();
+
+        // Import any expenses parsed natively while the app was closed
+        try {
+          const pending = await SMSModule.getPendingExpenses();
+          if (pending && pending.length > 0) {
+            const now = new Date();
+            for (const item of pending) {
+              const amount = item.amount as number;
+              const originalMessage = item.originalMessage as string;
+              const newExpense: Omit<ExtractedExpense, "id"> = {
+                amount,
+                merchant: extractMerchantName(originalMessage),
+                originalMessage,
+                timestamp: now.toLocaleString(),
+                date: now.toISOString(),
+              };
+
+              try {
+                await databaseManager.insertExpense(newExpense);
+              } catch (err) {
+                console.error("Failed to save pending native expense:", err);
+              }
+            }
+
+            // Reload after inserting native-imported expenses
+            await loadExpensesFromDB();
+            // Prevent re-processing the same SMS: mark last processed message
+            try {
+              const last = pending[pending.length - 1];
+              if (last && last.originalMessage)
+                setLastProcessedMessage(last.originalMessage as string);
+            } catch (e) {
+              // ignore
+            }
+          }
+        } catch (e) {
+          console.error("Error importing pending native expenses:", e);
+        }
         setDbError(null);
       } catch (error) {
-        console.error('Failed to initialize database:', error);
-        setDbError('Failed to initialize database. Some features may not work.');
+        console.error("Failed to initialize database:", error);
+        setDbError(
+          "Failed to initialize database. Some features may not work."
+        );
       } finally {
         setIsLoading(false);
       }
@@ -57,13 +101,14 @@ export default function HomeScreen() {
       const expenses = await databaseManager.getAllExpenses();
       setExtractedExpenses(expenses);
     } catch (error) {
-      console.error('Failed to load expenses:', error);
-      setDbError('Failed to load expenses from database.');
+      console.error("Failed to load expenses:", error);
+      setDbError("Failed to load expenses from database.");
     }
   }, []);
 
-  // SMS polling effect
+  // SMS polling effect (start only after DB init / native import completes)
   useEffect(() => {
+    if (isLoading) return; // wait for DB init and pending import
     const getSMS = async () => {
       try {
         const latestSMS = await SMSModule.getLatestSMS();
@@ -75,9 +120,9 @@ export default function HomeScreen() {
 
           if (debitAmounts.length > 0) {
             const now = new Date();
-            
+
             for (const { amount, originalMessage } of debitAmounts) {
-              const newExpense: Omit<ExtractedExpense, 'id'> = {
+              const newExpense: Omit<ExtractedExpense, "id"> = {
                 amount,
                 merchant: extractMerchantName(originalMessage),
                 originalMessage,
@@ -88,10 +133,10 @@ export default function HomeScreen() {
               try {
                 // Save to database
                 await databaseManager.insertExpense(newExpense);
-                console.log('Expense saved to database');
+                console.log("Expense saved to database");
               } catch (error) {
-                console.error('Failed to save expense to database:', error);
-                setDbError('Failed to save expense to database.');
+                console.error("Failed to save expense to database:", error);
+                setDbError("Failed to save expense to database.");
               }
             }
 
@@ -108,7 +153,7 @@ export default function HomeScreen() {
     // Poll every 2 seconds
     const interval = setInterval(getSMS, 2000);
     return () => clearInterval(interval);
-  }, [lastProcessedMessage, loadExpensesFromDB]);
+  }, [isLoading, lastProcessedMessage, loadExpensesFromDB]);
 
   // Calculate monthly expenses whenever extractedExpenses changes
   useEffect(() => {
@@ -178,7 +223,7 @@ export default function HomeScreen() {
               setMonthlyExpenses([]);
               Alert.alert("Success", "All expenses have been cleared.");
             } catch (error) {
-              console.error('Failed to clear expenses:', error);
+              console.error("Failed to clear expenses:", error);
               Alert.alert("Error", "Failed to clear expenses from database.");
             }
           },
@@ -193,8 +238,8 @@ export default function HomeScreen() {
       await loadExpensesFromDB();
       setDbError(null);
     } catch (error) {
-      console.error('Failed to refresh expenses:', error);
-      setDbError('Failed to refresh expenses.');
+      console.error("Failed to refresh expenses:", error);
+      setDbError("Failed to refresh expenses.");
     } finally {
       setRefreshing(false);
     }
@@ -291,7 +336,10 @@ export default function HomeScreen() {
                   .sort((a, b) => b.amount - a.amount)
                   .slice(0, 3)
                   .map((expense, expIndex) => (
-                    <View key={expense.id || expIndex} style={styles.monthlyExpenseItem}>
+                    <View
+                      key={expense.id || expIndex}
+                      style={styles.monthlyExpenseItem}
+                    >
                       <Text style={styles.monthlyExpenseMerchant}>
                         {expense.merchant}
                       </Text>
@@ -322,7 +370,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <ScrollView 
+    <ScrollView
       style={styles.container}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />

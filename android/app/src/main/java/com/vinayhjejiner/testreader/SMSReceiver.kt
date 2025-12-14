@@ -18,9 +18,21 @@ class SMSReceiver : BroadcastReceiver() {
 
                 Log.d("SMSReceiver", "Received SMS: $smsBody")
 
-                // Save SMS to shared preferences
-                val prefs = context?.getSharedPreferences("SMS_APP", Context.MODE_PRIVATE)
-                prefs?.edit()?.putString("latest_sms", smsBody)?.apply()
+                // Forward SMS to the foreground service for processing (keep onReceive short)
+                val serviceIntent = Intent(context, SMSService::class.java)
+                serviceIntent.putExtra(SMSService.EXTRA_SMS_BODY, smsBody)
+                if (context != null) {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        try {
+                            context.startForegroundService(serviceIntent)
+                        } catch (e: Exception) {
+                            // Fallback
+                            context.startService(serviceIntent)
+                        }
+                    } else {
+                        context.startService(serviceIntent)
+                    }
+                }
             }
         }
     }
